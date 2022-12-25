@@ -42,7 +42,33 @@ def prompt_test():
 
 @app.route('/prompt_compare', methods=['GET'])
 def prompt_compare():
+  print("Loaded prompt compare view", file=sys.stderr)
   return render_template('prompt_compare.html')
+
+@app.route('/prompt_comparison', methods=['POST'])
+def prompt_comparison():
+  first_prompt = request.form['first_prompt']
+  second_prompt = request.form['second_prompt']
+  test = request.form['test']
+  iterations = int(request.form['iterations'])
+  print(f"Comparing prompts {iterations} time(s)", file=sys.stderr)
+  better_results = {
+    "first_prompt": 0,
+    "second_prompt": 0
+  }
+  for i in range(0, iterations):
+    comparison = compare_prompts(first_prompt, second_prompt, test)
+    if comparison is True:
+      better_results["first_prompt"] += 1
+    elif comparison is False:
+      better_results["second_prompt"] += 1
+
+    if better_results['first_prompt'] > better_results['second_prompt']:
+      return f"After {iterations}, first prompt is better ({better_results['first_prompt'] / iterations * 100}%)"
+    elif better_results['first_prompt'] < better_results['second_prompt']:
+      return f"After {iterations}, second prompt is better ({better_results['second_prompt'] / iterations * 100}%)"
+    else:
+      return f"After {iterations}, prompts are tied"
 
 @app.route('/prompt', methods=['POST'])
 def prompt():
@@ -127,13 +153,25 @@ def test_prompt(prompt, test):
     top_p=TOP_P,
     frequency_penalty=FREQUENCY_PENALTY,
     presence_penalty=PRESENCE_PENALTY
-  ).choices[0].text
+  ).choices[0].text.lower()
 
   print(f"Got test result: {test_result}", file=sys.stderr)
-    
-  if test_result == "True":
+  
+  if "true" in test_result and "false" in test_result:
+    raise Exception(f'Test result {test_result} was ambiguous')
+  elif "yes" in test_result and "no" in test_result:
+    raise Exception(f'Test result {test_result} was ambiguous')
+  elif "true" in test_result and "no" in test_result:
+    raise Exception(f'Test result {test_result} was ambiguous')
+  elif "false" in test_result and "yes" in test_result:
+    raise Exception(f'Test result {test_result} was ambiguous')
+  elif "true" in test_result:
     return True
-  if test_result == "False":
+  elif "yes" in test_result:
+    return True
+  elif "false" in test_result:
+    return False
+  elif "no" in test_result:
     return False
   else:
     raise Exception(f'Test result {test_result} was unexpected format')
@@ -149,7 +187,7 @@ def compare_prompts(first_prompt, second_prompt, test, iterations = 1):
   second_prompt_successes = sum(second_prompt_results)
   if first_prompt_successes > second_prompt_successes:
     return True
-  if first_prompt_successes < second_prompt_successes:
+  elif first_prompt_successes < second_prompt_successes:
     return False
   else:
     return None

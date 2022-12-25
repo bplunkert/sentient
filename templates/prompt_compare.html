@@ -1,0 +1,43 @@
+<html>
+  <head>Compare two Prompts</head>
+  <body>
+    <form onsubmit="comparePrompts(); return false;">
+      <label for="first_prompt">Enter first prompt:</label><br>
+      <textarea id="first_prompt" name="first_prompt"></textarea><br>
+      <label for="second_prompt">Enter second prompt:</label><br>
+      <textarea id="second_prompt" name="second_prompt"></textarea><br>
+      <label for="test">Enter a test:</label><br>
+      <textarea id="test" name="test"></textarea><br>
+      <label id="iterations_label" for="iterations" value="5" >Iterations: 5</label><br>
+      <input type="range" min="1" max="20" step="1" value="5" id="iterations"><br>
+      <br>
+      <input type="submit" value="Submit">
+    </form> 
+    
+    <div id="response"></div>
+  
+    <script>
+      const iterationsInput = document.getElementById('iterations');
+      iterationsInput.addEventListener('input', () => {
+        document.getElementById('iterations_label').textContent = `Iterations: ${iterationsInput.value}`;
+      });
+
+      async function comparePrompts() {
+        const firstPrompt = document.getElementById("first_prompt").value;
+        const secondPrompt = document.getElementById("second_prompt").value;
+        const test = document.getElementById("test").value;
+        const iterations = iterationsInput.value;
+        const response = await fetch("/prompt_comparison", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded"
+          },
+          body: `first_prompt=${firstPrompt}&second_prompt=${secondPrompt}&test=${test}&iterations=${iterations}`
+        });
+        const responseText = await response.text();
+        document.getElementById("response").innerHTML = responseText;
+      }
+
+    </script>
+  </body>
+</html>

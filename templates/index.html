@@ -1,8 +1,8 @@
 <html>
-  <head>Run a prompt</head>
+  <head>Run a Prompt</head>
   <body>
-    <form onsubmit="sendPrompt(); return false;">
-      <label for="prompt">Enter a prompt:</label><br>
+    <form onsubmit="testPrompt(); return false;">
+      <label for="prompt">Enter prompt:</label><br>
       <input type="text" id="prompt" name="prompt"><br>
       <input type="submit" value="Submit">
     </form> 
@@ -10,8 +10,9 @@
     <div id="response"></div>
   
     <script>
-      function sendPrompt() {
+      function testPrompt() {
         var prompt = document.getElementById("prompt").value;
+
         var xhttp = new XMLHttpRequest();
         xhttp.onreadystatechange = function() {
           if (this.readyState == 4 && this.status == 200) {
