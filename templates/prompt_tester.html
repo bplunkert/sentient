@@ -1,0 +1,30 @@
+<html>
+  <head>Test a Prompt</head>
+  <body>
+    <form onsubmit="testPrompt(); return false;">
+      <label for="prompt">Enter a prompt:</label><br>
+      <input type="text" id="prompt" name="prompt"><br>
+      <label for="test">Enter a test:</label><br>
+      <input type="text" id="test" name="test"><br>
+      <input type="submit" value="Submit">
+    </form> 
+    
+    <div id="response"></div>
+  
+    <script>
+      function testPrompt() {
+        var prompt = document.getElementById("prompt").value;
+        var test = document.getElementById("test").value;
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+          if (this.readyState == 4 && this.status == 200) {
+            document.getElementById("response").innerHTML = this.responseText;
+          }
+        };
+        xhttp.open("POST", "/prompt_test", true);
+        xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+        xhttp.send(`prompt=${prompt}&test=${test}`);
+      }
+    </script>
+  </body>
+</html>
