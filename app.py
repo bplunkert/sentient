@@ -70,12 +70,15 @@ def prompt_comparison():
           elif comparison is False:
             better_results["second_prompt"] += 1
 
+  # Determine the reason for the comparison result and assign it to the `reason` variable
   if better_results['first_prompt'] > better_results['second_prompt']:
-    return f"After {iterations}, first prompt is better ({better_results['first_prompt'] / iterations * 100}%) because {reason}. More suggestions: {recommend_more_prompts(first_prompt, test, reason)}"
+    reason = qualitative_comparison(first_prompt, second_prompt, test)
+    return f"After {iterations} iterations, first prompt is better ({better_results['first_prompt'] / iterations * 100}%) because {reason}"
   elif better_results['first_prompt'] < better_results['second_prompt']:
-    return f"After {iterations}, second prompt is better ({better_results['second_prompt'] / iterations * 100}%) because {reason}. More suggestions: {recommend_more_prompts(second_prompt, test, reason)}"
+    reason = qualitative_comparison(second_prompt, first_prompt, test)
+    return f"After {iterations} iterations, second prompt is better ({better_results['second_prompt'] / iterations * 100}%) because {reason}"
   else:
-    return f"After {iterations}, prompts are tied"
+    return f"After {iterations} iterations, both prompts are equally good"
 
 @app.route('/prompt', methods=['POST'])
 def prompt():
@@ -205,7 +208,7 @@ def compare_prompts(first_prompt, second_prompt, test, iterations = 1):
 def qualitative_comparison(better_prompt, worse_prompt, test):
   """ Given a better prompt and a worse prompt, return a qualitative comparison of why the better prompt is better"""
   print("Qualitative comparison", file=sys.stderr)
-  prompt = "We want to write a prompt that generates results that consistently satisfy a test. Given a better prompt, a worse prompt, and a test, explain what differentiates the better prompt from the worse prompt. (Phrase like this: 'A better prompt should...')"
+  prompt = "We want to write a prompt that generates results that consistently satisfy a test. Given a better prompt, a worse prompt, and a test, explain what differentiates the better prompt from the worse prompt. (Phrase like this: 'A better prompt should...'). Be sure this prompt is likely to result in passing the test."
   prompt += "\nBetter prompt:\n" + better_prompt
   prompt += "\nWorse prompt:\n" + worse_prompt
   prompt += "\nTest:\n" + test
