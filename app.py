@@ -76,18 +76,19 @@ def prompt_comparison():
 @app.route('/prompt', methods=['POST'])
 def prompt():
   prompt = request.form['prompt']
-  if prompt.startswith('DEPLOY'):
-  else:
-    response = openai.Completion.create(
-      model='text-davinci-003',
-      prompt=prompt,
-      temperature=TEMPERATURE,
-      max_tokens=MAX_TOKENS,
-      top_p=TOP_P,
-      frequency_penalty=FREQUENCY_PENALTY,
-      presence_penalty=PRESENCE_PENALTY,
-      stop=STOP
-    ).choices[0].text
+  # if prompt.startswith('DEPLOY'):
+  #   response = openAi.Completion
+  # else:
+  response = openai.Completion.create(
+    model='text-davinci-003',
+    prompt=prompt,
+    temperature=TEMPERATURE,
+    max_tokens=MAX_TOKENS,
+    top_p=TOP_P,
+    frequency_penalty=FREQUENCY_PENALTY,
+    presence_penalty=PRESENCE_PENALTY,
+    stop=STOP
+  ).choices[0].text
   print(f"Got response: {response}", file=sys.stderr)
   put_context('chats', prompt + "\n" + response)
   return response + "\n" + get_context('chats')
