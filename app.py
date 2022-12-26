@@ -1,3 +1,4 @@
+import concurrent.futures
 from flask import Flask, render_template, request
 import openai
 import os
@@ -56,15 +57,18 @@ def prompt_comparison():
     "first_prompt": 0,
     "second_prompt": 0
   }
-  for i in range(0, iterations):
-    comparison = compare_prompts(first_prompt, second_prompt, test)
-    if comparison is True:
-      better_results["first_prompt"] += 1
-      reason = qualitative_comparison(first_prompt, second_prompt, test)
-    elif comparison is False:
-      better_results["second_prompt"] += 1
-      reason = qualitative_comparison(second_prompt, first_prompt, test)
 
+  with concurrent.futures.ThreadPoolExecutor() as executor:
+      # Create a list of tasks to run concurrently
+      tasks = [executor.submit(compare_prompts, first_prompt, second_prompt, test) for i in range(iterations)]
+
+      # Iterate over the completed tasks to count the results
+      for task in concurrent.futures.as_completed(tasks):
+          comparison = task.result()
+          if comparison is True:
+            better_results["first_prompt"] += 1
+          elif comparison is False:
+            better_results["second_prompt"] += 1
 
   if better_results['first_prompt'] > better_results['second_prompt']:
     return f"After {iterations}, first prompt is better ({better_results['first_prompt'] / iterations * 100}%) because {reason}. More suggestions: {recommend_more_prompts(first_prompt, test, reason)}"
