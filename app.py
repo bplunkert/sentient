@@ -11,8 +11,7 @@ redis = redis.Redis(host='redis', port=6379, db=0)
 
 # Inference parameters
 TEMPERATURE=0.4
-MAX_TOKENS=400
-TOP_P=1.0
+MAX_TOKENS=800
 FREQUENCY_PENALTY=0.6
 PRESENCE_PENALTY=0.0
 STOP="."
@@ -79,7 +78,7 @@ def prompt_comparison():
     reason = qualitative_comparison(second_prompt, first_prompt, test)
     return f"After {iterations} iterations, second prompt is better ({better_results['second_prompt'] / iterations * 100}%) because {reason}. Recommend prompt(s):  {json.dumps(recommend_more_prompts(first_prompt, test, reason, 3))}"
   else:
-    return f"After {iterations} iterations, both prompts are equally good"
+    return f"After {iterations} iterations, both prompts are equally good.  Recommend prompt(s): {json.dumps(recommend_more_prompts(first_prompt, test, '', 3))},  {json.dumps(recommend_more_prompts(second_prompt, test, '', 3))}"
 
 @app.route('/prompt', methods=['POST'])
 def prompt():
@@ -92,7 +91,6 @@ def prompt():
     prompt=prompt,
     temperature=TEMPERATURE,
     max_tokens=MAX_TOKENS,
-    top_p=TOP_P,
     frequency_penalty=FREQUENCY_PENALTY,
     presence_penalty=PRESENCE_PENALTY,
     stop=STOP
@@ -107,7 +105,6 @@ def get_context_tag(message):
     prompt=message + "\n I want you to summarize the above in the single most identifiable word (a tag) from the following: people, places, events, conversations. Do not say more than one word, and only choose one of these options.",
     temperature=0.1,
     max_tokens=MAX_TOKENS,
-    top_p=TOP_P,
     frequency_penalty=FREQUENCY_PENALTY,
     presence_penalty=PRESENCE_PENALTY,
     stop=STOP
@@ -137,7 +134,6 @@ def put_context(context_tag, additional_context):
       prompt=prompt,
       temperature=TEMPERATURE,
       max_tokens=MAX_TOKENS,
-      top_p=TOP_P,
       frequency_penalty=FREQUENCY_PENALTY,
       presence_penalty=PRESENCE_PENALTY,
       stop="\n\n"
@@ -154,7 +150,6 @@ def test_prompt(prompt, test):
     prompt=prompt,
     temperature=TEMPERATURE,
     max_tokens=MAX_TOKENS,
-    top_p=TOP_P,
     frequency_penalty=FREQUENCY_PENALTY,
     presence_penalty=PRESENCE_PENALTY
   ).choices[0].text
@@ -164,7 +159,6 @@ def test_prompt(prompt, test):
     prompt=f"{response}\n{test}\n",
     temperature=TEMPERATURE,
     max_tokens=MAX_TOKENS,
-    top_p=TOP_P,
     frequency_penalty=FREQUENCY_PENALTY,
     presence_penalty=PRESENCE_PENALTY
   ).choices[0].text.lower()
@@ -209,7 +203,7 @@ def compare_prompts(first_prompt, second_prompt, test, iterations = 1):
 def qualitative_comparison(better_prompt, worse_prompt, test):
   """ Given a better prompt and a worse prompt, return a qualitative comparison of why the better prompt is better"""
   print("Qualitative comparison", file=sys.stderr)
-  prompt = "We want to write a prompt that generates results that consistently satisfy a test. Given a better prompt, a worse prompt, and a test, explain what differentiates the better prompt from the worse prompt. (Phrase like this: 'A better prompt should...'). Be sure this prompt is likely to result in passing the test."
+  prompt = "We want to write a prompt that generates results that consistently satisfy a test. Given a better prompt, a worse prompt, and a test, explain what differentiates the better prompt from the worse prompt. (Phrase like this: 'A better prompt should...'). Recommend changes to further refine the prompt and increase the test pass rate."
   prompt += "\nBetter prompt:\n" + better_prompt
   prompt += "\nWorse prompt:\n" + worse_prompt
   prompt += "\nTest:\n" + test
@@ -218,12 +212,12 @@ def qualitative_comparison(better_prompt, worse_prompt, test):
     prompt=prompt,
     temperature=TEMPERATURE,
     max_tokens=MAX_TOKENS,
-    top_p=TOP_P,
     frequency_penalty=FREQUENCY_PENALTY,
     presence_penalty=PRESENCE_PENALTY,
     stop=STOP
   ).choices[0].text
   return response
+
 
 def recommend_more_prompts(prompt, test, guidelines = "", n = 1):
   """ Given a prompt, a test, and optionally some guidelines, return a prompt that is similar to the given prompt, but that is different in some way. """
@@ -231,41 +225,44 @@ def recommend_more_prompts(prompt, test, guidelines = "", n = 1):
   prompt += "Prompt:\n" + prompt
   prompt += "Test:\n" + test
   prompt += "Guidelines:\n" + guidelines
-  prompt += "Return a prompt that is similar to the given prompt, but that is different in some way:\n"
+  prompt += "Return a prompt that is similar to the given prompt, but that is different in some way that follows above guidelines. Write a prompt that is likely to pass the test above:\n"
   response = openai.Completion.create(
     model='text-davinci-003',
     prompt=prompt,
-    temperature=0.5,
+    temperature=0.8,
     max_tokens=MAX_TOKENS,
-    top_p=TOP_P,
-    frequency_penalty=FREQUENCY_PENALTY,
-    presence_penalty=PRESENCE_PENALTY,
+    frequency_penalty=0.9,
+    presence_penalty=0.9,
     stop=':'
   ).choices[0].text
   return response
 
-def deploy_code(current_code, change_request):
-    # Use the OpenAI API to request a code update
-    response = openai.Code.create(
-        model='code-davinci-002',
-        prompt=f"{current_code}\n{change_request}",
-        temperature=0.5,
-        max_tokens=1024
-    ).choices[0].code
+# def deploy_code(current_code, change_request):
+#     # Use the OpenAI API to request a code update
+#     response = openai.Code.create(
+#         model='code-davinci-002',
+#         prompt=f"{current_code}\n{change_request}",
+#         temperature=0.5,
+#         max_tokens=1024
+#     ).choices[0].code
 
-    # Extract the updated code from the response
-    updated_code = response['choices'][0]['text']
+#     # Extract the updated code from the response
+#     updated_code = response['choices'][0]['text']
 
-    # Replace the current code with the updated code in memory
-    exec(updated_code, globals())
+#     # Replace the current code with the updated code in memory
+#     exec(updated_code, globals())
 
-    # Write the updated code to a file in the current directory
-    with open('updated_code.py', 'w') as f:
-        f.write(updated_code)
+#     # Write the updated code to a file in the current directory
+#     with open('updated_code.py', 'w') as f:
+#         f.write(updated_code)
 
 
-    # Return a message to confirm that the code has been updated
-    return "Code updated successfully"
+#     # Return a message to confirm that the code has been updated
+#     return "Code updated successfully"
+
+
+# def qualitative_estimation(first_prompt, second_prompt, test):
+#   """ Given two prompts and a test, ask the inference engine to estimate which prompt is more likely to pass the chosen test """
 
 
 if __name__ == '__main__':
