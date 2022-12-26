@@ -1,5 +1,6 @@
 import concurrent.futures
 from flask import Flask, render_template, request
+import json
 import openai
 import os
 import redis
@@ -10,7 +11,7 @@ redis = redis.Redis(host='redis', port=6379, db=0)
 
 # Inference parameters
 TEMPERATURE=0.4
-MAX_TOKENS=2000
+MAX_TOKENS=400
 TOP_P=1.0
 FREQUENCY_PENALTY=0.6
 PRESENCE_PENALTY=0.0
@@ -73,10 +74,10 @@ def prompt_comparison():
   # Determine the reason for the comparison result and assign it to the `reason` variable
   if better_results['first_prompt'] > better_results['second_prompt']:
     reason = qualitative_comparison(first_prompt, second_prompt, test)
-    return f"After {iterations} iterations, first prompt is better ({better_results['first_prompt'] / iterations * 100}%) because {reason}"
+    return f"After {iterations} iterations, first prompt is better ({better_results['first_prompt'] / iterations * 100}%) because {reason}. Recommend prompt(s): {json.dumps(recommend_more_prompts(first_prompt, test, reason, 3))}"
   elif better_results['first_prompt'] < better_results['second_prompt']:
     reason = qualitative_comparison(second_prompt, first_prompt, test)
-    return f"After {iterations} iterations, second prompt is better ({better_results['second_prompt'] / iterations * 100}%) because {reason}"
+    return f"After {iterations} iterations, second prompt is better ({better_results['second_prompt'] / iterations * 100}%) because {reason}. Recommend prompt(s):  {json.dumps(recommend_more_prompts(first_prompt, test, reason, 3))}"
   else:
     return f"After {iterations} iterations, both prompts are equally good"
 
@@ -234,7 +235,7 @@ def recommend_more_prompts(prompt, test, guidelines = "", n = 1):
   response = openai.Completion.create(
     model='text-davinci-003',
     prompt=prompt,
-    temperature=0.6,
+    temperature=0.5,
     max_tokens=MAX_TOKENS,
     top_p=TOP_P,
     frequency_penalty=FREQUENCY_PENALTY,
