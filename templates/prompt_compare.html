@@ -27,7 +27,7 @@
         const secondPrompt = document.getElementById("second_prompt").value;
         const test = document.getElementById("test").value;
         const iterations = iterationsInput.value;
-        const response = await fetch("/prompt_comparison", {
+        const response = await fetch("/prompt_compare", {
           method: "POST",
           headers: {
             "Content-Type": "application/x-www-form-urlencoded"

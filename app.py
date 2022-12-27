@@ -84,12 +84,12 @@ def prompt_compare():
     # Determine the reason for the comparison result and assign it to the `reason` variable
     if better_results['first_prompt'] > better_results['second_prompt']:
       reason = qualitative_comparison(first_prompt, second_prompt, test)
-      return f"After {iterations} iterations, first prompt is better ({better_results['first_prompt'] / iterations * 100}%) because {reason}. Recommend prompt(s): {json.dumps(recommend_more_prompts(first_prompt, test, reason, 3))}"
+      return f"After {iterations} iterations, first prompt is better ({better_results['first_prompt'] / iterations * 100}%) because {reason}. Recommend prompt(s): {json.dumps(recommend_prompts(test, first_prompt, reason, 3))}"
     elif better_results['first_prompt'] < better_results['second_prompt']:
       reason = qualitative_comparison(second_prompt, first_prompt, test)
-      return f"After {iterations} iterations, second prompt is better ({better_results['second_prompt'] / iterations * 100}%) because {reason}. Recommend prompt(s):  {json.dumps(recommend_more_prompts(first_prompt, test, reason, 3))}"
+      return f"After {iterations} iterations, second prompt is better ({better_results['second_prompt'] / iterations * 100}%) because {reason}. Recommend prompt(s):  {json.dumps(recommend_prompts(test, second_prompt, reason, 3))}"
     else:
-      return f"After {iterations} iterations, both prompts are equally good.  Recommend prompt(s): {json.dumps(recommend_more_prompts(first_prompt, test, '', 3))},  {json.dumps(recommend_more_prompts(second_prompt, test, '', 3))}"
+      return f"After {iterations} iterations, both prompts are equally good.  Recommend prompt(s): {json.dumps(recommend_prompts(test, first_prompt, '', 3))},  {json.dumps(recommend_prompts(test, second_prompt, '', 3))}"
 
 
 #
@@ -159,24 +159,24 @@ def test_prompt(prompt, test):
     frequency_penalty=FREQUENCY_PENALTY,
     presence_penalty=PRESENCE_PENALTY
   ).choices[0].text.lower()
-
-  print(f"Got test result: {test_result}", file=sys.stderr)
+  test_result_words = test_result.split()
+  print(f"Got test result: {test_result_words}", file=sys.stderr)
   
-  if "true" in test_result and "false" in test_result:
+  if "true" in test_result_words and "false" in test_result_words:
     raise Exception(f'Test result {test_result} was ambiguous')
-  elif "yes" in test_result and "no" in test_result:
+  elif "yes" in test_result_words and "no" in test_result_words:
     raise Exception(f'Test result {test_result} was ambiguous')
-  elif "true" in test_result and "no" in test_result:
+  elif "true" in test_result_words and "no" in test_result_words:
     raise Exception(f'Test result {test_result} was ambiguous')
-  elif "false" in test_result and "yes" in test_result:
+  elif "false" in test_result_words and "yes" in test_result_words:
     raise Exception(f'Test result {test_result} was ambiguous')
-  elif "true" in test_result:
+  elif "true" in test_result_words:
     return True
-  elif "yes" in test_result:
+  elif "yes" in test_result_words:
     return True
-  elif "false" in test_result:
+  elif "false" in test_result_words:
     return False
-  elif "no" in test_result:
+  elif "no" in test_result_words:
     return False
   else:
     raise Exception(f'Test result {test_result} was unexpected format')
@@ -216,7 +216,7 @@ def qualitative_comparison(better_prompt, worse_prompt, test):
   return response
 
 
-def recommend_more_prompts(prompt, test, guidelines = "", n = 1):
+def recommend_prompts(test, prompt = "", guidelines = "", n = 1):
   """ Given a prompt, a test, and optionally some guidelines, return a prompt that is similar to the given prompt, but that is different in some way. """
   print("Recommend more comparisons", file=sys.stderr)
   prompt += "Prompt:\n" + prompt
