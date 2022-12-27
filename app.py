@@ -263,7 +263,7 @@ def get_recommended_prompt(prompt_string):
         frequency_penalty=0.9,
         presence_penalty=0.9,
         stop=':'
-    ).choices[0].text
+    ).choices[0].text.strip()
 
 
 # def deploy_code(current_code, change_request):
