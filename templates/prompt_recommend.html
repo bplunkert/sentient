@@ -1,0 +1,47 @@
+<html>
+  <head><title>Recommend Prompts</title></head>
+  <body>
+    <a href="/">Home</a><hr>
+    <h3>Recommend Prompts</h3>
+    <form onsubmit="recommendPrompts(); return false;">
+      <label for="test">Enter a test:</label><br>
+      <input type="text" id="test" name="test"><br>
+
+      <label for="prompt">Enter a prompt (optional):</label><br>
+      <input type="text" id="prompt" name="prompt"><br>
+      <label for="guidelines">Enter guidelines (optional):</label><br>
+      <input type="text" id="guidelines" name="guidelines"><br>
+
+      <label id="count_label" for="count" value="5" >Recommendations: 5</label><br>
+      <input type="range" min="1" max="20" step="1" value="5" id="count"><br>
+      <input type="submit" value="Submit">
+    </form>
+    
+    <div id="response"></div>
+  
+    <script>
+      const recommendationsCountInput = document.getElementById('count');
+      recommendationsCountInput.addEventListener('input', () => {
+        document.getElementById('count_label').textContent = `Recommendations: ${recommendationsCountInput.value}`;
+      });
+      async function recommendPrompts() {
+        var prompt = document.getElementById("prompt").value;
+        var test = document.getElementById("test").value;
+        var guidelines = document.getElementById("guidelines").value;
+        var recommendationsCount = document.getElementById("count").value;
+
+        var url_parms = `test=${test}&count=${recommendationsCount}&prompt=${prompt}&guidelines=${guidelines}`;
+
+        const response = await fetch('/prompt_recommend', {
+          method: 'POST',
+          headers: {
+            'Content-type': 'application/x-www-form-urlencoded'
+          },
+          body: url_parms
+        });
+        const responseText = await response.text();
+        document.getElementById("response").innerHTML = responseText;
+      }
+    </script>
+  </body>
+</html>

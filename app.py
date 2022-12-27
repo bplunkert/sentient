@@ -91,7 +91,12 @@ def prompt_compare():
     else:
       return f"After {iterations} iterations, both prompts are equally good.  Recommend prompt(s): {json.dumps(recommend_prompts(test, first_prompt, '', 3))},  {json.dumps(recommend_prompts(test, second_prompt, '', 3))}"
 
-
+@app.route('/prompt_recommend', methods=['GET', 'POST'])
+def prompt_recommend():
+  if request.method == 'GET':
+    return render_template('prompt_recommend.html')
+  elif request.method == 'POST':
+    return recommend_prompts(request.form['test'], request.form['prompt'], request.form['guidelines'], request.form['count'])
 #
 # Non-route functions below:
 #
@@ -217,21 +222,38 @@ def qualitative_comparison(better_prompt, worse_prompt, test):
 
 
 def recommend_prompts(test, prompt = "", guidelines = "", n = 1):
-  """ Given a prompt, a test, and optionally some guidelines, return a prompt that is similar to the given prompt, but that is different in some way. """
+  """ Given a test, and optionally a prompt and/or some guidelines, return a prompt that is similar to the given prompt, but that is different in some way. """
   print("Recommend more comparisons", file=sys.stderr)
-  prompt += "Prompt:\n" + prompt
-  prompt += "Test:\n" + test
-  prompt += "Guidelines:\n" + guidelines
-  prompt += "Return a prompt that is similar to the given prompt, but that is different in some way that follows above guidelines. Write a prompt that is likely to pass the test above:\n"
-  response = openai.Completion.create(
-    model='text-davinci-003',
-    prompt=prompt,
-    temperature=0.8,
-    max_tokens=MAX_TOKENS,
-    frequency_penalty=0.9,
-    presence_penalty=0.9,
-    stop=':'
-  ).choices[0].text
+
+  prompt_pre_tuning = ''
+  prompt_pre_tuning += 'The test we want our prompt to return "yes" or "true" for. Test: "True or false, the above list includes a shark but does not include an elephant."'
+  prompt_pre_tuning += '\nAn example prompt that might be used to attempt to pass our test. The recommendation made must be different from this prompt, in a way adhering to guidelines. Prompt: List four types of animals.'
+  prompt_pre_tuning += '\nGuidelines that any recommended prompts should adhere to. Guidelines: Any prompt recommended should list four objects.'
+  prompt_pre_tuning += '\nRecommend a prompt that is likely to return a "yes" or "true" answer for the test above, without making any reference to it. For example, if the test is checking a list, the prompt recommended should return a list. Recommendation:'
+
+  prompt_string = prompt_pre_tuning + '\nThe test we want our prompt to return "yes" or "true" for: ' + test
+
+  if prompt != '':
+    prompt_string += "\nPrompt: " + prompt
+  
+  if guidelines != '':
+    prompt_string += "\nGuidelines: " + guidelines
+
+  prompt_string += "\nRecommendation: " 
+
+  response = []
+  for i in range(int(n)):
+    response.append(
+      openai.Completion.create(
+        model='text-davinci-003',
+        prompt=prompt_string,
+        temperature=0.6,
+        max_tokens=MAX_TOKENS,
+        frequency_penalty=0.9,
+        presence_penalty=0.9,
+        stop=':'
+      ).choices[0].text
+    )
   return response
 
 # def deploy_code(current_code, change_request):
