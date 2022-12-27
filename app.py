@@ -163,8 +163,8 @@ def test_prompt(prompt, test):
     max_tokens=MAX_TOKENS,
     frequency_penalty=FREQUENCY_PENALTY,
     presence_penalty=PRESENCE_PENALTY
-  ).choices[0].text.lower()
-  test_result_words = test_result.split()
+  ).choices[0].text.lower().strip()
+  test_result_words = test_result
   print(f"Got test result: {test_result_words}", file=sys.stderr)
   
   if "true" in test_result_words and "false" in test_result_words:
@@ -221,30 +221,41 @@ def qualitative_comparison(better_prompt, worse_prompt, test):
   return response
 
 
+import concurrent.futures
+
 def recommend_prompts(test, prompt = "", guidelines = "", n = 1):
-  """ Given a test, and optionally a prompt and/or some guidelines, return a prompt that is similar to the given prompt, but that is different in some way. """
-  print("Recommend more comparisons", file=sys.stderr)
+    """ Given a test, and optionally a prompt and/or some guidelines, return a prompt that is similar to the given prompt, but that is different in some way. """
+    print("Recommend more comparisons", file=sys.stderr)
 
-  prompt_pre_tuning = ''
-  prompt_pre_tuning += 'The test we want our prompt to return "yes" or "true" for. Test: "True or false, the above list includes a shark but does not include an elephant."'
-  prompt_pre_tuning += '\nAn example prompt that might be used to attempt to pass our test. The recommendation made must be different from this prompt, in a way adhering to guidelines. Prompt: List four types of animals.'
-  prompt_pre_tuning += '\nGuidelines that any recommended prompts should adhere to. Guidelines: Any prompt recommended should list four objects.'
-  prompt_pre_tuning += '\nRecommend a prompt that is likely to return a "yes" or "true" answer for the test above, without making any reference to it. For example, if the test is checking a list, the prompt recommended should return a list. Recommendation:'
+    prompt_pre_tuning = ''
+    prompt_pre_tuning += 'The test we want our prompt to return "yes" or "true" for. Test: "True or false, the above list includes a shark but does not include an elephant."'
+    prompt_pre_tuning += '\nAn example prompt that might be used to attempt to pass our test. The recommendation made must be different from this prompt, in a way adhering to guidelines. Prompt: List four types of animals.'
+    prompt_pre_tuning += '\nGuidelines that any recommended prompts should adhere to. Guidelines: Any prompt recommended should list four objects.'
+    prompt_pre_tuning += '\nRecommend a prompt that is likely to return a "yes" or "true" answer for the test above, without making any reference to it. For example, if the test is checking a list, the prompt recommended should return a list. Recommendation:'
 
-  prompt_string = prompt_pre_tuning + '\nThe test we want our prompt to return "yes" or "true" for: ' + test
+    prompt_string = prompt_pre_tuning + '\nThe test we want our prompt to return "yes" or "true" for: ' + test
 
-  if prompt != '':
-    prompt_string += "\nPrompt: " + prompt
-  
-  if guidelines != '':
-    prompt_string += "\nGuidelines: " + guidelines
+    if prompt != '':
+        prompt_string += "\nPrompt: " + prompt
+    if guidelines != '':
+        prompt_string += "\nGuidelines: " + guidelines
+    prompt_string += "\nRecommendation: " 
 
-  prompt_string += "\nRecommendation: " 
+    recommended_prompts = []
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        # Create a list of tasks to run concurrently
+        tasks = [executor.submit(get_recommended_prompt, prompt_string) for i in range(int(n))]
 
-  response = []
-  for i in range(int(n)):
-    response.append(
-      openai.Completion.create(
+        # Iterate over the completed tasks to get the recommended prompts
+        for task in concurrent.futures.as_completed(tasks):
+            recommended_prompt = task.result()
+            recommended_prompts.append(recommended_prompt)
+
+    return recommended_prompts
+
+def get_recommended_prompt(prompt_string):
+    """ Returns a recommended prompt by calling the OpenAI API with the given prompt string. """
+    return openai.Completion.create(
         model='text-davinci-003',
         prompt=prompt_string,
         temperature=0.6,
@@ -252,9 +263,8 @@ def recommend_prompts(test, prompt = "", guidelines = "", n = 1):
         frequency_penalty=0.9,
         presence_penalty=0.9,
         stop=':'
-      ).choices[0].text
-    )
-  return response
+    ).choices[0].text
+
 
 # def deploy_code(current_code, change_request):
 #     # Use the OpenAI API to request a code update
