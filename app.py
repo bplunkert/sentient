@@ -25,79 +25,76 @@ else:
 def index():
   return render_template('index.html')
 
-@app.route('/prompt_tester', methods=['GET'])
-def prompt_tester():
-  return render_template('prompt_tester.html')
-  if None not in (request.form['prompt'], request.form['test']):
+@app.route('/prompt', methods=['GET', 'POST'])
+def prompt():
+  if request.method == 'GET':
+    return render_template('prompt.html')
+  elif requeset.method == 'POST':
+    prompt = request.form['prompt']
+    response = openai.Completion.create(
+      model='text-davinci-003',
+      prompt=prompt,
+      temperature=TEMPERATURE,
+      max_tokens=MAX_TOKENS,
+      frequency_penalty=FREQUENCY_PENALTY,
+      presence_penalty=PRESENCE_PENALTY,
+      stop=STOP
+    ).choices[0].text
+    print(f"Got response: {response}", file=sys.stderr)
+    put_context('chats', prompt + "\n" + response)
+    return response + "\n" + get_context('chats')
+
+@app.route('/prompt_test', methods=['GET', 'POST'])
+def prompt_test():
+  if request.method == 'GET':
+    return render_template('prompt_test.html')
+  elif request.method == 'POST':
     prompt = request.form['prompt']
     test = request.form['test']
     test_result = test_prompt(prompt, test)
-    return render_template('prompt_tester.html', test_result=test_result)
+    return str(test_result)
 
-@app.route('/prompt_test', methods=['POST'])
-def prompt_test():
-  prompt = request.form['prompt']
-  test = request.form['test']
-  test_result = test_prompt(prompt, test)
-  return str(test_result)
-
-@app.route('/prompt_compare', methods=['GET'])
+@app.route('/prompt_compare', methods=['GET', 'POST'])
 def prompt_compare():
-  print("Loaded prompt compare view", file=sys.stderr)
-  return render_template('prompt_compare.html')
+  if request.method == 'GET':
+    return render_template('prompt_compare.html')
+  elif request.method == 'POST':
+    first_prompt = request.form['first_prompt']
+    second_prompt = request.form['second_prompt']
+    test = request.form['test']
+    iterations = int(request.form['iterations'])
+    print(f"Comparing prompts {iterations} time(s)", file=sys.stderr)
+    better_results = {
+      "first_prompt": 0,
+      "second_prompt": 0
+    }
 
-@app.route('/prompt_comparison', methods=['POST'])
-def prompt_comparison():
-  first_prompt = request.form['first_prompt']
-  second_prompt = request.form['second_prompt']
-  test = request.form['test']
-  iterations = int(request.form['iterations'])
-  print(f"Comparing prompts {iterations} time(s)", file=sys.stderr)
-  better_results = {
-    "first_prompt": 0,
-    "second_prompt": 0
-  }
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        # Create a list of tasks to run concurrently
+        tasks = [executor.submit(compare_prompts, first_prompt, second_prompt, test) for i in range(iterations)]
 
-  with concurrent.futures.ThreadPoolExecutor() as executor:
-      # Create a list of tasks to run concurrently
-      tasks = [executor.submit(compare_prompts, first_prompt, second_prompt, test) for i in range(iterations)]
+        # Iterate over the completed tasks to count the results
+        for task in concurrent.futures.as_completed(tasks):
+            comparison = task.result()
+            if comparison is True:
+              better_results["first_prompt"] += 1
+            elif comparison is False:
+              better_results["second_prompt"] += 1
 
-      # Iterate over the completed tasks to count the results
-      for task in concurrent.futures.as_completed(tasks):
-          comparison = task.result()
-          if comparison is True:
-            better_results["first_prompt"] += 1
-          elif comparison is False:
-            better_results["second_prompt"] += 1
+    # Determine the reason for the comparison result and assign it to the `reason` variable
+    if better_results['first_prompt'] > better_results['second_prompt']:
+      reason = qualitative_comparison(first_prompt, second_prompt, test)
+      return f"After {iterations} iterations, first prompt is better ({better_results['first_prompt'] / iterations * 100}%) because {reason}. Recommend prompt(s): {json.dumps(recommend_more_prompts(first_prompt, test, reason, 3))}"
+    elif better_results['first_prompt'] < better_results['second_prompt']:
+      reason = qualitative_comparison(second_prompt, first_prompt, test)
+      return f"After {iterations} iterations, second prompt is better ({better_results['second_prompt'] / iterations * 100}%) because {reason}. Recommend prompt(s):  {json.dumps(recommend_more_prompts(first_prompt, test, reason, 3))}"
+    else:
+      return f"After {iterations} iterations, both prompts are equally good.  Recommend prompt(s): {json.dumps(recommend_more_prompts(first_prompt, test, '', 3))},  {json.dumps(recommend_more_prompts(second_prompt, test, '', 3))}"
 
-  # Determine the reason for the comparison result and assign it to the `reason` variable
-  if better_results['first_prompt'] > better_results['second_prompt']:
-    reason = qualitative_comparison(first_prompt, second_prompt, test)
-    return f"After {iterations} iterations, first prompt is better ({better_results['first_prompt'] / iterations * 100}%) because {reason}. Recommend prompt(s): {json.dumps(recommend_more_prompts(first_prompt, test, reason, 3))}"
-  elif better_results['first_prompt'] < better_results['second_prompt']:
-    reason = qualitative_comparison(second_prompt, first_prompt, test)
-    return f"After {iterations} iterations, second prompt is better ({better_results['second_prompt'] / iterations * 100}%) because {reason}. Recommend prompt(s):  {json.dumps(recommend_more_prompts(first_prompt, test, reason, 3))}"
-  else:
-    return f"After {iterations} iterations, both prompts are equally good.  Recommend prompt(s): {json.dumps(recommend_more_prompts(first_prompt, test, '', 3))},  {json.dumps(recommend_more_prompts(second_prompt, test, '', 3))}"
 
-@app.route('/prompt', methods=['POST'])
-def prompt():
-  prompt = request.form['prompt']
-  # if prompt.startswith('DEPLOY'):
-  #   response = openAi.Completion
-  # else:
-  response = openai.Completion.create(
-    model='text-davinci-003',
-    prompt=prompt,
-    temperature=TEMPERATURE,
-    max_tokens=MAX_TOKENS,
-    frequency_penalty=FREQUENCY_PENALTY,
-    presence_penalty=PRESENCE_PENALTY,
-    stop=STOP
-  ).choices[0].text
-  print(f"Got response: {response}", file=sys.stderr)
-  put_context('chats', prompt + "\n" + response)
-  return response + "\n" + get_context('chats')
+#
+# Non-route functions below:
+#
 
 def get_context_tag(message):
   context_tag = openai.Completion.create(

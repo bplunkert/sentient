@@ -1,28 +1,10 @@
 <html>
-  <head>Run a Prompt</head>
+  <head></head>
   <body>
-    <form onsubmit="testPrompt(); return false;">
-      <label for="prompt">Enter prompt:</label><br>
-      <input type="text" id="prompt" name="prompt"><br>
-      <input type="submit" value="Submit">
-    </form> 
-    
-    <div id="response"></div>
-  
-    <script>
-      function testPrompt() {
-        var prompt = document.getElementById("prompt").value;
-
-        var xhttp = new XMLHttpRequest();
-        xhttp.onreadystatechange = function() {
-          if (this.readyState == 4 && this.status == 200) {
-            document.getElementById("response").innerHTML = this.responseText;
-          }
-        };
-        xhttp.open("POST", "/prompt", true);
-        xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-        xhttp.send(`prompt=${prompt}`);
-      }
-    </script>
+    <ul>
+      <li><a href="/prompt">Run a Prompt</a></li>
+      <li><a href="/prompt_test">Test a Prompt</a></li>
+      <li><a href="/prompt_compare">Compare Prompts</a></li>
+    </ul>
   </body>
 </html>
