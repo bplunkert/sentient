@@ -25,11 +25,37 @@ else:
 def index():
   return render_template('index.html')
 
+@app.route('/conversation', methods=['GET', 'POST'])
+def conversation():
+  context_tag = request.args.get('context_tag')
+  if context_tag is None:
+    context_tag = 'conversation'
+  conversation_history = redis.get(f"conversation.{context_tag}")
+
+  if request.method == 'GET':
+    return render_template('conversation.html', conversation_history=conversation_history)
+  elif request.method == 'POST':
+    prompt = conversation_history + "\n" + context + "\n" + request.form['prompt']
+    context_tag = request.form['context_tag']
+    context = get_context('context_tag')
+    
+    response = openai.Completion.create(
+      model='text-davinci-003',
+      prompt=prompt,
+      temperature=TEMPERATURE,
+      max_tokens=MAX_TOKENS,
+      frequency_penalty=FREQUENCY_PENALTY,
+      presence_penalty=PRESENCE_PENALTY,
+      stop=STOP
+    ).choices[0].text
+
+  put_context(context_tag, prompt + "\n" + response)
+
 @app.route('/prompt', methods=['GET', 'POST'])
 def prompt():
   if request.method == 'GET':
     return render_template('prompt.html')
-  elif requeset.method == 'POST':
+  elif request.method == 'POST':
     prompt = request.form['prompt']
     response = openai.Completion.create(
       model='text-davinci-003',
@@ -42,16 +68,6 @@ def prompt():
     ).choices[0].text
     print(f"Got response: {response}", file=sys.stderr)
     return response
-
-@app.route('/prompt_test', methods=['GET', 'POST'])
-def prompt_test():
-  if request.method == 'GET':
-    return render_template('prompt_test.html')
-  elif request.method == 'POST':
-    prompt = request.form['prompt']
-    test = request.form['test']
-    test_result = test_prompt(prompt, test)
-    return str(test_result)
 
 @app.route('/prompt_compare', methods=['GET', 'POST'])
 def prompt_compare():
@@ -90,13 +106,6 @@ def prompt_compare():
     else:
       return f"After {iterations} iterations, both prompts are equally good.  Recommend prompt(s): {json.dumps(recommend_prompts(test, first_prompt, '', 3))},  {json.dumps(recommend_prompts(test, second_prompt, '', 3))}"
 
-@app.route('/prompt_recommend', methods=['GET', 'POST'])
-def prompt_recommend():
-  if request.method == 'GET':
-    return render_template('prompt_recommend.html')
-  elif request.method == 'POST':
-    return recommend_prompts(request.form['test'], request.form['prompt'], request.form['guidelines'], request.form['count'])
-
 @app.route('/prompt_context', methods=['GET', 'POST'])
 def prompt_context():
   if request.method == 'GET':
@@ -122,6 +131,24 @@ def prompt_context():
       output_response += "<br><strong>Context:</strong> " + context
 
     return output_response
+
+@app.route('/prompt_recommend', methods=['GET', 'POST'])
+def prompt_recommend():
+  if request.method == 'GET':
+    return render_template('prompt_recommend.html')
+  elif request.method == 'POST':
+    return recommend_prompts(request.form['test'], request.form['prompt'], request.form['guidelines'], request.form['count'])
+
+@app.route('/prompt_test', methods=['GET', 'POST'])
+def prompt_test():
+  if request.method == 'GET':
+    return render_template('prompt_test.html')
+  elif request.method == 'POST':
+    prompt = request.form['prompt']
+    test = request.form['test']
+    test_result = test_prompt(prompt, test)
+    return str(test_result)
+
 #
 # Non-route functions below:
 #
@@ -149,11 +176,11 @@ def put_context(context_tag, additional_context):
   if old_context is None:
     new_context = additional_context
   else:
-  #   pre_prompt = "I am going to have you recontextualize some information. I will give you a context, and then a message. You will then recontextualize the response to fit the context. The context will begin with BEGIN CONTEXT and end with END CONTEXT. The message will begin with BEGIN MESSAGE and END MESSAGE.\n"
-  #   mid_prompt = "BEGIN CONTEXT\n" + str(old_context) + "\nEND CONTEXT\nBEGIN MESSAGE\n" + additional_context + "\nEND MESSAGE\n"
-  #   prompt = pre_prompt + mid_prompt + "Integrate the message into the context by recontextualizing the message into the context. You are free to expand the length of the context as much as necessary to contain all the important parts. If you are not sure how to summarize, keep the message verbatim.\n"
+    #pre_prompt = "I am going to have you recontextualize some information. I will give you a context, and then a message. You will then recontextualize the response to fit the context. The context will begin with BEGIN CONTEXT and end with END CONTEXT. The message will begin with BEGIN MESSAGE and END MESSAGE.\n"
+    #mid_prompt = "BEGIN CONTEXT\n" + str(old_context) + "\nEND CONTEXT\nBEGIN MESSAGE\n" + additional_context + "\nEND MESSAGE\n"
+    #prompt = pre_prompt + mid_prompt + "Integrate the message into the context by recontextualizing the message into the context. You are free to expand the length of the context as much as necessary to contain all the important parts. If you are not sure how to summarize, keep the message verbatim.\n"
 
-    prompt = str(old_context) + "\n" + additional_context + "\n" + "Resummarize, recontextualize, and de-duplicate everything:\n\n"
+    prompt = "Summary: \n" + str(old_context) + "\nNew material:\n" + additional_context + "\n" + "The summary should be in the form of a summary of a conversation, so that details can be recalled as needed. Resummarize, recontextualize the new material above into the summary above it:\n\n"
 
     new_context = openai.Completion.create(
       model="text-davinci-003",

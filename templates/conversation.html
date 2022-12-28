@@ -1,18 +1,18 @@
 <html>
-  <head><title>Run Prompt with Context</title></head>
+  <head><title>Conversation with Running Context</title></head>
   <body>
     <a href="/">Home</a><hr>
-    <h3>Run Prompt with Context</h3>
+    <h3>Conversation with Running Context</h3>
     <form onsubmit="runPromptWithContext(); return false;">
       <label for="prompt">Enter a prompt:</label><br>
       <input type="text" id="prompt" name="prompt"><br>
       <label for="context_tag">Context tag:</label><br>
-      <input type="text" id="context_tag" name="context_tag" value="chats"><br>
+      <input type="text" id="context_tag" name="context_tag" value="conversation"><br>
       <input type="submit" value="Submit">
     </form> 
     
-    <div id="response"></div>
-  
+    <div id="conversation">{{ conversation_history }}</div>
+
     <script>
       async function runPromptWithContext() {
         const prompt = document.getElementById("prompt").value;
@@ -26,7 +26,7 @@
           body: `prompt=${prompt}&context_tag=${contextTag}`
         });
         const responseText = await response.text();
-        document.getElementById("response").innerHTML = responseText;
+        document.getElementById("conversation").innerHTML = responseText;
       }
 
     </script>
