@@ -1,0 +1,34 @@
+<html>
+  <head><title>Run Prompt with Context</title></head>
+  <body>
+    <a href="/">Home</a><hr>
+    <h3>Test Prompt</h3>
+    <form onsubmit="runPromptWithContext(); return false;">
+      <label for="prompt">Enter a prompt:</label><br>
+      <input type="text" id="prompt" name="prompt"><br>
+      <label for="context_tag">Context tag:</label><br>
+      <input type="text" id="context_tag" name="context_tag" value="chats"><br>
+      <input type="submit" value="Submit">
+    </form> 
+    
+    <div id="response"></div>
+  
+    <script>
+      async function runPromptWithContext() {
+        const prompt = document.getElementById("prompt").value;
+        const contextTag = document.getElementById("context_tag").value;
+
+        const response = await fetch("/prompt_context", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded"
+          },
+          body: `prompt=${prompt}&context_tag=${contextTag}`
+        });
+        const responseText = await response.text();
+        document.getElementById("response").innerHTML = responseText;
+      }
+
+    </script>
+  </body>
+</html>
