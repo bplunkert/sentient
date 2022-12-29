@@ -11,7 +11,7 @@ redis = redis.Redis(host='redis', port=6379, db=0)
 
 # Inference parameters
 TEMPERATURE=0.4
-MAX_TOKENS=800
+MAX_TOKENS=2000
 FREQUENCY_PENALTY=0.6
 PRESENCE_PENALTY=0.0
 STOP="."
@@ -35,21 +35,22 @@ def conversation():
   if request.method == 'GET':
     return render_template('conversation.html', conversation_history=conversation_history)
   elif request.method == 'POST':
-    prompt = conversation_history + "\n" + context + "\n" + request.form['prompt']
     context_tag = request.form['context_tag']
     context = get_context('context_tag')
-    
+    prompt = context + "\n" + conversation_history + "\n"  + request.form['prompt']
+
     response = openai.Completion.create(
       model='text-davinci-003',
       prompt=prompt,
-      temperature=TEMPERATURE,
+      temperature=0.8,
       max_tokens=MAX_TOKENS,
-      frequency_penalty=FREQUENCY_PENALTY,
-      presence_penalty=PRESENCE_PENALTY,
+      frequency_penalty=0.7,
+      presence_penalty=0.1,
       stop=STOP
     ).choices[0].text
 
-  put_context(context_tag, prompt + "\n" + response)
+    put_context(context_tag, request.form['prompt'] + "\n" + response)
+    return conversation_history
 
 @app.route('/prompt', methods=['GET', 'POST'])
 def prompt():
